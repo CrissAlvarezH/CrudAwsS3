@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from testbackend.aws_s3_credentials import s3_data
 from files.utils import S3Utils
 import pandas as pd 
+import uuid
 
 class ListUploadAndDeleteFile(APIView):
 
@@ -61,20 +62,22 @@ class DownloadFile(APIView):
         """
         s3_client = S3Utils.get_s3_client()
 
+        uuid_file = uuid.uuid4().hex # uuid to avoid multi-access to file in different request simultaly
+
         # Save file temporaly 
         try:
-            S3Utils.download_file_s3(s3_key=key_file, local_path='./temp_files/temp.csv')
+            S3Utils.download_file_s3(s3_key=key_file, local_path='./temp_files/temp_%s.csv' % (uuid_file))
         except Exception as e:
             return Response({ 'okay': False, 'error': str(e) })
 
         # Read file to send on response
-        with open('./temp_files/temp.csv', 'rb') as f:
+        with open('./temp_files/temp_%s.csv' % (uuid_file), 'rb') as f:
             filedata = f.read()
 
         response = HttpResponse(filedata, content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="%s"' % (key_file)
 
-        remove('./temp_files/temp.csv') # Delete file that will be send as response
+        remove('./temp_files/temp_%s.csv' % (uuid_file)) # Delete file that will be send as response
 
         return response
 
@@ -86,13 +89,15 @@ class ProcessCsvData(APIView):
         Filter columns with 'columns' parameter
         Sort filds with 'sort' and 'asc' parameter
         """
+        uuid_file = uuid.uuid4().hex # uuid to avoid multi-access to file in different request simultaly
+
         # Save file temporaly 
         try:
-            S3Utils.download_file_s3(s3_key=key_file, local_path='./temp_files/data_temp.csv')
+            S3Utils.download_file_s3(s3_key=key_file, local_path='./temp_files/data_temp_%s.csv' % (uuid_file))
         except Exception as e:
             return Response({ 'okay': False, 'error': str(e) })
 
-        data = pd.read_csv("./temp_files/data_temp.csv")
+        data = pd.read_csv("./temp_files/data_temp_%s.csv" % (uuid_file))
 
         # [ INIT ] FILTER COLUMNS WITH PARAMS
         filter_columns = []
@@ -129,6 +134,8 @@ class ProcessCsvData(APIView):
         except Exception as e:
             return Response( { 'okay': False, 'error': "La columna %s no existe"%(str(e)) } )
         # [ END ] SORTING VALUES
+
+        remove("./temp_files/data_temp_%s.csv" % (uuid_file)) # Delete temp file
 
         return Response(
                 { 
