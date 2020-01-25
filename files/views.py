@@ -1,15 +1,15 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from testbackend.aws_s3_credentials import s3_data
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 import boto3
 import pandas as pd 
 import logging
 
 
 def get_s3_client():
-    sessionS3 = boto3.session.Session()
-
-    s3Client = sessionS3.client(
+    return boto3.client(
             service_name='s3',
             region_name= s3_data['region_name'],
             aws_access_key_id= s3_data['aws_access_key_id'],
@@ -19,6 +19,23 @@ def get_s3_client():
 @api_view(['GET'])
 def status(request):
     return Response({'okay': True})
+
+@api_view(['POST'])
+def upload(request):
+    s3Client = get_s3_client()
+
+    file = request.FILES.get('file')
+
+    if file:
+        s3Client.upload_fileobj(
+            file,  # File
+            'testfilessimetrick',  # Name of bucket
+            file.name #  Name of file in the bucket
+        )
+
+        return Response({ 'okay': True, 'file': file.name })
+    
+    return Response({ 'okay': False, 'error': 'File no puede ser nulo' })
 
 @api_view(['GET'])
 def load_data(request):
@@ -39,7 +56,7 @@ def load_data(request):
 
     # [ INIT ] SORTING VALUES
     ascending = True
-    
+
     asc = request.query_params.get('asc')
     if asc:
         try:
