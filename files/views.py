@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from testbackend.aws_s3_credentials import s3_data
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from botocore.errorfactory import ClientError
 import boto3
 import pandas as pd 
 import logging
@@ -59,7 +60,10 @@ def download(request, key_file):
 
     # Save file temporaly 
     with open('./temp_files/temp.csv', 'wb') as file:
-        s3_client.download_fileobj('testfilessimetrick', key_file, file)
+        try:
+            s3_client.download_fileobj('testfilessimetrick', key_file, file)
+        except ClientError:
+            return Response({ 'okay': False, 'error': '%s no existe en el bucket' % (key_file) })
 
     # Read file to send on response
     with open('./temp_files/temp.csv', 'rb') as f:
@@ -81,8 +85,17 @@ def delete_file(request, key_file):
     return Response({ 'okay': True })
 
 @api_view(['GET'])
-def load_data(request):
-    data = pd.read_csv("./temp_files/test2.csv")
+def load_data(request, key_file):
+    s3_client = get_s3_client()
+
+    # Save file temporaly 
+    with open('./temp_files/data_temp.csv', 'wb') as file:
+        try:
+            s3_client.download_fileobj('testfilessimetrick', key_file, file)
+        except ClientError:
+            return Response({ 'okay': False, 'error': '%s no existe en el bucket' % (key_file) })
+
+    data = pd.read_csv("./temp_files/data_temp.csv")
 
     # [ INIT ] FILTER COLUMNS WITH PARAMS
     filter_columns = []
