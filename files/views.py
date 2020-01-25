@@ -22,14 +22,28 @@ def get_s3_client():
 def status(request):
     return Response({'okay': True})
 
+@api_view(['GET'])
+def list_files(request):
+    s3_client = get_s3_client()
+    
+    list_objs = s3_client.list_objects(Bucket='testfilessimetrick')
+
+    def get_only_key(obj):
+        return obj['Key']
+
+    list_only_keys = map(get_only_key, list_objs['Contents'])
+
+    return Response({ 'okay': True, 'list': list_only_keys })
+    
+
 @api_view(['POST'])
 def upload(request):
-    s3Client = get_s3_client()
+    s3_client = get_s3_client()
 
     file = request.FILES.get('file')
 
     if file:
-        s3Client.upload_fileobj(
+        s3_client.upload_fileobj(
             file,  # File
             'testfilessimetrick',  # Name of bucket
             file.name #  Name of file in the bucket
@@ -41,11 +55,11 @@ def upload(request):
 
 @api_view(['GET'])
 def download(request, key_file):
-    s3Client = get_s3_client()
+    s3_client = get_s3_client()
 
     # Save file temporaly 
     with open('./temp_files/temp.csv', 'wb') as file:
-        s3Client.download_fileobj('testfilessimetrick', key_file, file)
+        s3_client.download_fileobj('testfilessimetrick', key_file, file)
 
     # Read file to send on response
     with open('./temp_files/temp.csv', 'rb') as f:
@@ -57,6 +71,14 @@ def download(request, key_file):
     remove('./temp_files/temp.csv') # Delete file that will be send as response
 
     return response
+
+@api_view(['DELETE'])
+def delete_file(request, key_file):
+    s3_client = get_s3_client()
+
+    s3_client.delete_object(Bucket='testfilessimetrick', Key=key_file)
+
+    return Response({ 'okay': True })
 
 @api_view(['GET'])
 def load_data(request):
