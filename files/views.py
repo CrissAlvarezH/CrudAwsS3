@@ -25,18 +25,38 @@ def load_data(request):
     data = pd.read_csv("./csv_data/test2.csv")
 
     # [ INIT ] FILTER COLUMNS WITH PARAMS
-    filter_columns = ''
+    filter_columns = []
 
     query_columns = request.query_params.get('columns')
     if query_columns:
         filter_columns = query_columns.split(',')
 
+    try:
+        data_result = data[filter_columns] if len(filter_columns) > 0 else data
+    except Exception as e:
+        return Response( { 'okay': False, 'error': str(e) } )
+    # [ END ] FILTER COLUMNS WITH PARAMS
+
+    # [ INIT ] SORTING VALUES
+    ascending = True
+    
+    asc = request.query_params.get('asc')
+    if asc:
+        try:
+            ascending = int(asc) > 0
+        except Exception as e:
+            return Response( { 'okay': False, 'error': 'El parametro \'asc\' debe ser entero' } )
+
+    sort_columns = []
+    query_sort_columns = request.query_params.get('sort')
+    if query_sort_columns:
+        sort_columns = query_sort_columns.split(',')
 
     try:
-        data_result = data if filter_columns == '' else data[filter_columns]
+        data_result = data_result.sort_values(by=sort_columns, ascending=ascending) if len(sort_columns) > 0 else data_result
     except Exception as e:
-        return Response( { 'okay': False, 'error': str(e)} )
-    # [ END ] FILTER COLUMNS WITH PARAMS
+        return Response( { 'okay': False, 'error': "La columna %s no existe"%(str(e)) } )
+    # [ END ] SORTING VALUES
 
     return Response(
             { 
