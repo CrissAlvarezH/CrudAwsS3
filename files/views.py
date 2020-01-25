@@ -1,4 +1,6 @@
 from rest_framework.decorators import api_view
+from django.http import HttpResponse
+from os import remove
 from rest_framework.response import Response
 from testbackend.aws_s3_credentials import s3_data
 from django.core.files.storage import default_storage
@@ -38,8 +40,27 @@ def upload(request):
     return Response({ 'okay': False, 'error': 'File no puede ser nulo' })
 
 @api_view(['GET'])
+def download(request, key_file):
+    s3Client = get_s3_client()
+
+    # Save file temporaly 
+    with open('./temp_files/temp.csv', 'wb') as file:
+        s3Client.download_fileobj('testfilessimetrick', key_file, file)
+
+    # Read file to send on response
+    with open('./temp_files/temp.csv', 'rb') as f:
+        filedata = f.read()
+
+    response = HttpResponse(filedata, content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="%s"' % (key_file)
+
+    remove('./temp_files/temp.csv') # Delete file that will be send as response
+
+    return response
+
+@api_view(['GET'])
 def load_data(request):
-    data = pd.read_csv("./csv_data/test2.csv")
+    data = pd.read_csv("./temp_files/test2.csv")
 
     # [ INIT ] FILTER COLUMNS WITH PARAMS
     filter_columns = []
