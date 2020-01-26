@@ -16,6 +16,18 @@ Usuario: `admin` </br>
 Email: `admin@email.com` </br>
 Contraseña: `admin1234` </br>
 
+## Configuración
+En al archivo `testbackend/aws_s3_credentials.py` se debe ingresar las credenciales de AWS, la estructura es la siguiente
+
+```
+s3_data = {
+    'aws_access_key_id': '',
+    'aws_secret_access_key': '',
+    'region_name': '',
+    'bucket_name': ''
+}
+```
+
 ## Endpoints
 
 - Subir archivo a AWS S3
